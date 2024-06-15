@@ -24,11 +24,20 @@ protected:
 	IOnlineSessionPtr SessionInterface = nullptr;
 	TArray<FName> CurrentSessionNames;
 
-	int32 SearchingPlayerNum = -1;
+	TSharedPtr<FOnlineSessionSearch> LastSessionSearch;
 
 public:
 	UFUNCTION(BlueprintCallable)
 	void CreateSession(const FName& SessionName);
+
+	UFUNCTION(BlueprintCallable)
+	void DestroySession(const FName& SessionName);
+
+	UFUNCTION(BlueprintCallable)
+	void FindSession(const FName SessionName);
+
+	UFUNCTION(BlueprintCallable)
+	void JoinSession(const FName SessionName);
 	
 protected:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;

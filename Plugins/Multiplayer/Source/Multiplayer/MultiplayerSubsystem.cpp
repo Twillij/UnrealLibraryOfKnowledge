@@ -10,6 +10,22 @@ void UMultiplayerSubsystem::CreateSession(const FName& SessionName)
 	SessionInterface->CreateSession(0, SessionName, NewSessionSettings);
 }
 
+void UMultiplayerSubsystem::DestroySession(const FName& SessionName)
+{
+	SessionInterface->DestroySession(SessionName);
+}
+
+void UMultiplayerSubsystem::FindSession(const FName SessionName)
+{
+	LastSessionSearch = MakeShareable(new FOnlineSessionSearch(DefaultSessionSearch));
+	SessionInterface->FindSessions(0, LastSessionSearch.ToSharedRef());
+}
+
+void UMultiplayerSubsystem::JoinSession(const FName SessionName)
+{
+	// TODO: Implement join session.
+}
+
 void UMultiplayerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
