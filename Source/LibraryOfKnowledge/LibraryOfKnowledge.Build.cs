@@ -15,7 +15,8 @@ public class LibraryOfKnowledge : ModuleRules
 				"InputCore",
 				"EnhancedInput",
 				"OnlineSubsystem",
-				"OnlineSubsystemSteam"
+				"OnlineSubsystemSteam",
+				"UMG"
 			});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
