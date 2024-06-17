@@ -2,6 +2,8 @@
 
 #define LOCTEXT_NAMESPACE "FMultiplayerModule"
 
+DEFINE_LOG_CATEGORY(LogMultiplayer);
+
 void FMultiplayerModule::StartupModule()
 {
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
