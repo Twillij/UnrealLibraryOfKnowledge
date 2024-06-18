@@ -23,7 +23,7 @@ protected:
 	FName OnlineSubsystemName = NAME_None;
 	
 	IOnlineSessionPtr SessionInterface = nullptr;
-	TArray<FName> CreatedSessionNames;
+	TArray<FName> ActiveSessionNames;
 
 	FOnCreateSessionCompleteDelegate CreateSessionCompleteDelegate;
 	FDelegateHandle CreateSessionCompleteDelegateHandle;
@@ -52,7 +52,7 @@ protected:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
-	void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
-	void OnDestroySessionComplete(FName SessionName, bool bWasSuccessful);
-	void OnFindSessionsComplete(bool bWasSuccessful);
+	void OnCreateSessionCompleted(FName SessionName, bool bWasSuccessful);
+	void OnDestroySessionCompleted(FName SessionName, bool bWasSuccessful);
+	void OnFindSessionsCompleted(bool bWasSuccessful);
 };

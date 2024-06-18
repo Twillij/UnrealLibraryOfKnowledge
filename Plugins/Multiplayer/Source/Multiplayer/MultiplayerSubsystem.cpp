@@ -7,9 +7,9 @@
 UMultiplayerSubsystem::UMultiplayerSubsystem()
 {
 	// Set the session delegates
-	CreateSessionCompleteDelegate = FOnCreateSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnCreateSessionComplete);
-	DestroySessionCompleteDelegate = FOnDestroySessionCompleteDelegate::CreateUObject(this, &ThisClass::OnDestroySessionComplete);
-	FindSessionsCompleteDelegate = FOnFindSessionsCompleteDelegate::CreateUObject(this, &ThisClass::OnFindSessionsComplete);
+	CreateSessionCompleteDelegate = FOnCreateSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnCreateSessionCompleted);
+	DestroySessionCompleteDelegate = FOnDestroySessionCompleteDelegate::CreateUObject(this, &ThisClass::OnDestroySessionCompleted);
+	FindSessionsCompleteDelegate = FOnFindSessionsCompleteDelegate::CreateUObject(this, &ThisClass::OnFindSessionsCompleted);
 	
 	// Set the default session settings
 	DefaultSessionSettings.NumPublicConnections = 2;
@@ -27,16 +27,33 @@ UMultiplayerSubsystem::UMultiplayerSubsystem()
 
 void UMultiplayerSubsystem::CreateSession(const FName SessionName)
 {
+	// TODO: Do all this logic on server only.
+	
 	FOnlineSessionSettings NewSessionSettings = DefaultSessionSettings;
 
+	// Bind the delegate to the session interface and store the handle
 	CreateSessionCompleteDelegateHandle = SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegate);
-	
-	SessionInterface->CreateSession(0, SessionName, NewSessionSettings);
+
+	// Try to create a session using the player's net ID and session settings
+	if (!SessionInterface->CreateSession(*UMultiplayerFunctionLibrary::GetLocalPlayerUniqueNetId(GetWorld()), SessionName, NewSessionSettings))
+	{
+		// Clear the bound delegate via the handle
+		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
+	}
 }
 
 void UMultiplayerSubsystem::DestroySession(const FName SessionName)
 {
-	SessionInterface->DestroySession(SessionName);
+	// TODO: Do all this logic on server only.
+	
+	// Bind the delegate to the session interface and store the handle
+	DestroySessionCompleteDelegateHandle = SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegate);
+	
+	if (!SessionInterface->DestroySession(SessionName))
+	{
+		// Clear the bound delegate via the handle
+		SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
+	}
 }
 
 void UMultiplayerSubsystem::FindSessions()
@@ -79,7 +96,7 @@ void UMultiplayerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	SessionInterface = OnlineSubsystem->GetSessionInterface();
 	if (SessionInterface)
 	{
-		SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &ThisClass::OnDestroySessionComplete);
+		SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &ThisClass::OnDestroySessionCompleted);
 	}
 
 	// Determine whether this is a LAN match or not
@@ -91,51 +108,66 @@ void UMultiplayerSubsystem::Deinitialize()
 {
 	Super::Deinitialize();
 
-	if (GetWorld() && GetWorld()->GetNetMode() < NM_Client)
+	// If this is not a client...
+	if (SessionInterface && GetWorld() && GetWorld()->GetNetMode() < NM_Client)
 	{
-		for (const FName SessionName : CreatedSessionNames)
+		// Get all the active session names.
+		for (int i = 0; i < ActiveSessionNames.Num(); ++i)
 		{
-			if (const FNamedOnlineSession* NamedSession = SessionInterface->GetNamedSession(SessionName))
+			// If a session with that name exists on the server...
+			if (const FNamedOnlineSession* NamedSession = SessionInterface->GetNamedSession(ActiveSessionNames[i]))
 			{
+				// And there are no registered players in that session...
 				if (NamedSession->RegisteredPlayers.Num() == 0)
 				{
-					SessionInterface->DestroySession(SessionName);
+					// Destroy that session.
+					SessionInterface->DestroySession(ActiveSessionNames[i]);
 				}
 			}
 		}
+		ActiveSessionNames.Empty();
 	}
 }
 
-void UMultiplayerSubsystem::OnCreateSessionComplete(const FName SessionName, const bool bWasSuccessful)
+void UMultiplayerSubsystem::OnCreateSessionCompleted(const FName SessionName, const bool bWasSuccessful)
 {
+	if (SessionInterface)
+	{
+		// Clear the bound delegate via the handle
+		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
+	}
 	if (bWasSuccessful)
 	{
-		CreatedSessionNames.Add(SessionName);
+		ActiveSessionNames.Add(SessionName);
 	}
 	UE_LOG(LogMultiplayer, Display, TEXT("Creating session \"%s\": %hs"), *SessionName.ToString(), bWasSuccessful ? "SUCCESS" : "FAILED")
 }
 
-void UMultiplayerSubsystem::OnDestroySessionComplete(const FName SessionName, const bool bWasSuccessful)
+void UMultiplayerSubsystem::OnDestroySessionCompleted(const FName SessionName, const bool bWasSuccessful)
 {
+	if (SessionInterface)
+	{
+		// Clear the bound delegate via the handle
+		SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
+	}
 	if (bWasSuccessful)
 	{
-		CreatedSessionNames.Remove(SessionName);
+		ActiveSessionNames.Remove(SessionName);
 	}
 	UE_LOG(LogMultiplayer, Display, TEXT("Destroying session \"%s\": %hs"), *SessionName.ToString(), bWasSuccessful ? "SUCCESS" : "FAILED")
 }
 
-void UMultiplayerSubsystem::OnFindSessionsComplete(const bool bWasSuccessful)
+void UMultiplayerSubsystem::OnFindSessionsCompleted(const bool bWasSuccessful)
 {
 	if (SessionInterface)
 	{
+		// Clear the bound delegate via the handle
 		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
 	}
-	
 	if (!bWasSuccessful || !LastSessionSearch)
 	{
 		UE_LOG(LogMultiplayer, Display, TEXT("Finding session: FAILED"))
 		return;
 	}
-	
 	UE_LOG(LogMultiplayer, Display, TEXT("Finding session: %i result"), LastSessionSearch->SearchResults.Num());
 }

@@ -7,7 +7,7 @@ FUniqueNetIdRepl UMultiplayerFunctionLibrary::GetLocalPlayerUniqueNetId(const UW
 	if (World)
 	{
 		const ULocalPlayer* LocalPlayer = World->GetFirstLocalPlayerFromController();
-		PlayerNetId = LocalPlayer ? *LocalPlayer->GetCachedUniqueNetId() : PlayerNetId;
+		PlayerNetId = LocalPlayer ? LocalPlayer->GetPreferredUniqueNetId() : PlayerNetId;
 	}
 	return PlayerNetId;
 }
