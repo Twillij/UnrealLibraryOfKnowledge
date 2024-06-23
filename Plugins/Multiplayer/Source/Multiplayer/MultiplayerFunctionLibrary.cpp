@@ -1,5 +1,5 @@
 #include "MultiplayerFunctionLibrary.h"
-#include "Multiplayer.h"
+#include "MultiplayerGlobals.h"
 
 FUniqueNetIdRepl UMultiplayerFunctionLibrary::GetLocalPlayerUniqueNetId(const UWorld* World)
 {
@@ -12,10 +12,18 @@ FUniqueNetIdRepl UMultiplayerFunctionLibrary::GetLocalPlayerUniqueNetId(const UW
 	return PlayerNetId;
 }
 
+bool UMultiplayerFunctionLibrary::IsClient(const UWorld* World)
+{
+	return World ? World->GetNetMode() >= NM_Client : false;
+}
+
+bool UMultiplayerFunctionLibrary::IsServer(const UWorld* World)
+{
+	return World ? World->GetNetMode() <= NM_ListenServer : true;
+}
+
 void UMultiplayerFunctionLibrary::LogNetMode(const UWorld* World)
 {
-	if (World)
-	{
-		UE_LOG(LogMultiplayer, Warning, TEXT("NetMode: %s"), *ToString(World->GetNetMode()));
-	}
+	const FString LogString = World ? ToString(World->GetNetMode()) : "Invalid";
+	UE_LOG(LogMultiplayer, Warning, TEXT("NetMode: %s"), *LogString);
 }

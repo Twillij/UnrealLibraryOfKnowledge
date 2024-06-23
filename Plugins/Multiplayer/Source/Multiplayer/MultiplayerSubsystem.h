@@ -7,7 +7,7 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "MultiplayerSubsystem.generated.h"
 
-UCLASS()
+UCLASS(Config=Game)
 class MULTIPLAYER_API UMultiplayerSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
@@ -23,7 +23,7 @@ protected:
 	FName OnlineSubsystemName = NAME_None;
 	
 	IOnlineSessionPtr SessionInterface = nullptr;
-	TArray<FName> ActiveSessionNames;
+	TArray<FName> HostedSessionNames;
 
 	FOnCreateSessionCompleteDelegate CreateSessionCompleteDelegate;
 	FDelegateHandle CreateSessionCompleteDelegateHandle;

@@ -1,5 +1,5 @@
 #include "MultiplayerSubsystem.h"
-#include "Multiplayer.h"
+#include "MultiplayerGlobals.h"
 #include "MultiplayerFunctionLibrary.h"
 #include "Interfaces/OnlineSessionInterface.h"
 #include "Online/OnlineSessionNames.h"
@@ -27,15 +27,17 @@ UMultiplayerSubsystem::UMultiplayerSubsystem()
 
 void UMultiplayerSubsystem::CreateSession(const FName SessionName)
 {
-	// TODO: Do all this logic on server only.
+	// Get the player's unique net ID
+	const FUniqueNetIdRepl PlayerNetId = UMultiplayerFunctionLibrary::GetLocalPlayerUniqueNetId(GetWorld());
 	
-	FOnlineSessionSettings NewSessionSettings = DefaultSessionSettings;
+	// TODO: Allow for custom session settings in the future.
+	FCustomSessionSettings CustomSessionSettings;
 
 	// Bind the delegate to the session interface and store the handle
 	CreateSessionCompleteDelegateHandle = SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegate);
-
-	// Try to create a session using the player's net ID and session settings
-	if (!SessionInterface->CreateSession(*UMultiplayerFunctionLibrary::GetLocalPlayerUniqueNetId(GetWorld()), SessionName, NewSessionSettings))
+	
+	// Try to create a session using the specified params
+	if (!SessionInterface->CreateSession(*PlayerNetId, SessionName, CustomSessionSettings.ToOnlineSessionSettings(DefaultSessionSettings)))
 	{
 		// Clear the bound delegate via the handle
 		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
@@ -107,25 +109,30 @@ void UMultiplayerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 void UMultiplayerSubsystem::Deinitialize()
 {
 	Super::Deinitialize();
-
-	// If this is not a client...
-	if (SessionInterface && GetWorld() && GetWorld()->GetNetMode() < NM_Client)
+	
+	if (SessionInterface)
 	{
-		// Get all the active session names.
-		for (int i = 0; i < ActiveSessionNames.Num(); ++i)
+		const int HostedSessionCount = HostedSessionNames.Num();
+		int Iterator = 0;
+		
+		// Get all the session names hosted by this machine.
+		for (int i = 0; i < HostedSessionCount; ++i)
 		{
 			// If a session with that name exists on the server...
-			if (const FNamedOnlineSession* NamedSession = SessionInterface->GetNamedSession(ActiveSessionNames[i]))
+			if (const FNamedOnlineSession* NamedSession = SessionInterface->GetNamedSession(HostedSessionNames[Iterator]))
 			{
 				// And there are no registered players in that session...
-				if (NamedSession->RegisteredPlayers.Num() == 0)
+				if (NamedSession && NamedSession->RegisteredPlayers.Num() == 0)
 				{
 					// Destroy that session.
-					SessionInterface->DestroySession(ActiveSessionNames[i]);
+					if (!SessionInterface->DestroySession(HostedSessionNames[Iterator]))
+					{
+						// If we failed to destroy the session, move on the next one.
+						Iterator++;
+					}
 				}
 			}
 		}
-		ActiveSessionNames.Empty();
 	}
 }
 
@@ -138,7 +145,7 @@ void UMultiplayerSubsystem::OnCreateSessionCompleted(const FName SessionName, co
 	}
 	if (bWasSuccessful)
 	{
-		ActiveSessionNames.Add(SessionName);
+		HostedSessionNames.Add(SessionName);
 	}
 	UE_LOG(LogMultiplayer, Display, TEXT("Creating session \"%s\": %hs"), *SessionName.ToString(), bWasSuccessful ? "SUCCESS" : "FAILED")
 }
@@ -152,7 +159,7 @@ void UMultiplayerSubsystem::OnDestroySessionCompleted(const FName SessionName, c
 	}
 	if (bWasSuccessful)
 	{
-		ActiveSessionNames.Remove(SessionName);
+		HostedSessionNames.Remove(SessionName);
 	}
 	UE_LOG(LogMultiplayer, Display, TEXT("Destroying session \"%s\": %hs"), *SessionName.ToString(), bWasSuccessful ? "SUCCESS" : "FAILED")
 }
