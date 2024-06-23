@@ -24,7 +24,7 @@ public class Multiplayer : ModuleRules
 			new string[]
 			{
 				"Core",
-				"OnlineSubsystem"
+				"OnlineSubsystem",
 			});
 		
 		
@@ -33,8 +33,9 @@ public class Multiplayer : ModuleRules
 			{
 				"CoreUObject",
 				"Engine",
+				"OnlineSubsystemUtils",
 				"Slate",
-				"SlateCore",
+				"SlateCore"
 			});
 		
 		

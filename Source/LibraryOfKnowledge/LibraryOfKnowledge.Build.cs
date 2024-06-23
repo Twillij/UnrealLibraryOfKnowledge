@@ -14,8 +14,6 @@ public class LibraryOfKnowledge : ModuleRules
 				"Engine",
 				"InputCore",
 				"EnhancedInput",
-				"OnlineSubsystem",
-				"OnlineSubsystemSteam",
 				"UMG"
 			});
 
