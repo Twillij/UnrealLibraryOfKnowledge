@@ -9,7 +9,7 @@ FCustomSessionSettings::FCustomSessionSettings(const FOnlineSessionSettings& Onl
 
 FOnlineSessionSettings FCustomSessionSettings::ToOnlineSessionSettings(const FOnlineSessionSettings& OnlineSessionSettings) const
 {
-	FOnlineSessionSettings Result;
+	FOnlineSessionSettings Result = OnlineSessionSettings;
 	Result.NumPublicConnections = NumPublicConnections;
 	return Result;
 }

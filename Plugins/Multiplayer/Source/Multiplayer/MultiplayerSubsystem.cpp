@@ -13,12 +13,13 @@ UMultiplayerSubsystem::UMultiplayerSubsystem()
 	
 	// Set the default session settings
 	DefaultSessionSettings.NumPublicConnections = 2;
-	DefaultSessionSettings.bIsDedicated = true;
+	DefaultSessionSettings.bIsDedicated = false;
+	DefaultSessionSettings.bAllowInvites = true;
 	DefaultSessionSettings.bAllowJoinInProgress = true;
+	DefaultSessionSettings.bAllowJoinViaPresence = true;
 	DefaultSessionSettings.bShouldAdvertise = true;
 	DefaultSessionSettings.bUseLobbiesIfAvailable = true;
 	DefaultSessionSettings.bUsesPresence = true;
-	DefaultSessionSettings.bAllowJoinViaPresence = true;
 
 	// Set the default session search settings
 	DefaultSessionSearch.MaxSearchResults = 64;
@@ -146,6 +147,7 @@ void UMultiplayerSubsystem::OnCreateSessionCompleted(const FName SessionName, co
 	if (bWasSuccessful)
 	{
 		HostedSessionNames.Add(SessionName);
+		GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::White, FString::Printf(TEXT("CREATE: %s"), *SessionName.ToString()));
 	}
 	UE_LOG(LogMultiplayer, Display, TEXT("Creating session \"%s\": %hs"), *SessionName.ToString(), bWasSuccessful ? "SUCCESS" : "FAILED")
 }
@@ -177,4 +179,5 @@ void UMultiplayerSubsystem::OnFindSessionsCompleted(const bool bWasSuccessful)
 		return;
 	}
 	UE_LOG(LogMultiplayer, Display, TEXT("Finding session: %i result"), LastSessionSearch->SearchResults.Num());
+	GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::White, FString::Printf(TEXT("RESULT: %i"), LastSessionSearch->SearchResults.Num()));
 }

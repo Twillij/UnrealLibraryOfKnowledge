@@ -12,5 +12,6 @@ void AMainMenuController::BeginPlay()
 		{
 			MainMenuWidget->AddToViewport();
 		}
+		SetShowMouseCursor(true);
 	}
 }
