@@ -33,6 +33,7 @@ void UMultiplayerSubsystem::CreateSession(const FName SessionName)
 	
 	// TODO: Allow for custom session settings in the future.
 	FCustomSessionSettings CustomSessionSettings;
+	CustomSessionSettings.SessionName = SessionName;
 
 	// Bind the delegate to the session interface and store the handle
 	CreateSessionCompleteDelegateHandle = SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegate);
@@ -179,5 +180,15 @@ void UMultiplayerSubsystem::OnFindSessionsCompleted(const bool bWasSuccessful)
 		return;
 	}
 	UE_LOG(LogMultiplayer, Display, TEXT("Finding session: %i result"), LastSessionSearch->SearchResults.Num());
-	GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::White, FString::Printf(TEXT("RESULT: %i"), LastSessionSearch->SearchResults.Num()));
+	GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::White, FString::Printf(TEXT("Session results: %i"),
+		LastSessionSearch->SearchResults.Num()));
+
+	TArray<FOnlineSessionSearchResult> Results = LastSessionSearch->SearchResults;
+	for (int i = 0; i < Results.Num(); ++i)
+	{
+		FString SessionName;
+		Results[i].Session.SessionSettings.Get(FName("SESSION_NAME"), SessionName);
+		UE_LOG(LogMultiplayer, Display, TEXT("Session %i: %s"), i + 1, *SessionName)
+		GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::White, FString::Printf(TEXT("Session: %s"), *SessionName));
+	}
 }

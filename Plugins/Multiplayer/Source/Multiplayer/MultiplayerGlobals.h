@@ -12,9 +12,9 @@ struct FCustomSessionSettings
 {
 	GENERATED_BODY()
 
-	FCustomSessionSettings() {}
-	FCustomSessionSettings(const FOnlineSessionSettings& OnlineSessionSettings);
-
+	// The name of the session to create
+	FName SessionName = NAME_None;
+	
 	// The number of publicly available connections advertised
 	int32 NumPublicConnections = 2;
 
