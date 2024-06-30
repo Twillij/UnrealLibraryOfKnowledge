@@ -2,10 +2,16 @@
 
 DEFINE_LOG_CATEGORY(LogMultiplayer);
 
-FOnlineSessionSettings FCustomSessionSettings::ToOnlineSessionSettings(const FOnlineSessionSettings& OnlineSessionSettings) const
+FMultiplayerSessionInfo::FMultiplayerSessionInfo(const FOnlineSession& Session)
+{
+	FString NameString;
+	Session.SessionSettings.Get(FName("SESSION_NAME"), NameString);
+	SessionName = FName(NameString);
+}
+
+FOnlineSessionSettings FMultiplayerSessionInfo::operator+(const FOnlineSessionSettings& OnlineSessionSettings) const
 {
 	FOnlineSessionSettings Result = OnlineSessionSettings;
 	Result.Set(FName("SESSION_NAME"), SessionName.ToString(), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
-	Result.NumPublicConnections = NumPublicConnections;
 	return Result;
 }

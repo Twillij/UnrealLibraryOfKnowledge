@@ -12,6 +12,11 @@ FUniqueNetIdRepl UMultiplayerFunctionLibrary::GetLocalPlayerUniqueNetId(const UW
 	return PlayerNetId;
 }
 
+FMultiplayerSessionInfo UMultiplayerFunctionLibrary::GetSessionInfoFromSearchResult(const FMultiplayerSessionSearchResult& SessionSearchResult)
+{
+	return FMultiplayerSessionInfo(SessionSearchResult.Result);
+}
+
 bool UMultiplayerFunctionLibrary::IsClient(const UWorld* World)
 {
 	return World ? World->GetNetMode() >= NM_Client : false;

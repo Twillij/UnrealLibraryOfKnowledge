@@ -6,17 +6,31 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMultiplayer, Display, All)
 
-// Online session settings that are customisable from the client side
 USTRUCT(BlueprintType)
-struct FCustomSessionSettings
+struct FMultiplayerSessionInfo
 {
 	GENERATED_BODY()
 
-	// The name of the session to create
-	FName SessionName = NAME_None;
+	FMultiplayerSessionInfo() {}
+	FMultiplayerSessionInfo(const FOnlineSession& Session);
+	FMultiplayerSessionInfo(const FOnlineSessionSearchResult& SessionSearchResult) { FMultiplayerSessionInfo(SessionSearchResult.Session); }
 	
-	// The number of publicly available connections advertised
-	int32 NumPublicConnections = 2;
+	// The name of the session
+	UPROPERTY(BlueprintReadWrite)
+	FName SessionName = NAME_None;
 
-	FOnlineSessionSettings ToOnlineSessionSettings(const FOnlineSessionSettings& OnlineSessionSettings) const;
+	// Combines the two settings into one
+	FOnlineSessionSettings operator+(const FOnlineSessionSettings& OnlineSessionSettings) const;
+};
+
+// A wrapper for FOnlineSessionSearchResult that is intended for blueprint use
+USTRUCT(BlueprintType)
+struct FMultiplayerSessionSearchResult
+{
+	GENERATED_BODY()
+
+	FMultiplayerSessionSearchResult() {}
+	FMultiplayerSessionSearchResult(const FOnlineSessionSearchResult& SessionSearchResult) : Result(SessionSearchResult) {}
+	
+	FOnlineSessionSearchResult Result;
 };

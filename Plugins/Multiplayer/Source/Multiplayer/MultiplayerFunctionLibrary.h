@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "MultiplayerGlobals.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "MultiplayerFunctionLibrary.generated.h"
 
@@ -13,6 +14,10 @@ public:
 	// Returns the unique net ID of the first local player from the world's controller.
 	UFUNCTION(BlueprintPure)
 	static FUniqueNetIdRepl GetLocalPlayerUniqueNetId(const UWorld* World);
+
+	// Returns the session info that was extracted from the session search result.
+	UFUNCTION(BlueprintPure)
+	static FMultiplayerSessionInfo GetSessionInfoFromSearchResult(const FMultiplayerSessionSearchResult& SessionSearchResult);
 
 	// Returns true if the world is running on a client build. Defaults false if the world is invalid.
 	UFUNCTION(BlueprintPure)
