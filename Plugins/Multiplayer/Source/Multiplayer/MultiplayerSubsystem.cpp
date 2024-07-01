@@ -103,6 +103,11 @@ void UMultiplayerSubsystem::JoinSession(const FName SessionName, const FMultipla
 	{
 		// Clear the bound delegate via the handle
 		SessionInterface->ClearOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegateHandle);
+
+		constexpr int32 ErrorCode = -1;
+		UE_LOG(LogMultiplayer, Warning, TEXT("Failed to join session \"%s\": Error code %i"), *SessionName.ToString(), ErrorCode);
+		GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::White,
+			FString::Printf(TEXT("Failed to join session \"%s\": Error code %i"), *SessionName.ToString(), ErrorCode));
 	}
 }
 
@@ -243,8 +248,15 @@ void UMultiplayerSubsystem::OnJoinSessionCompleted(const FName SessionName, cons
 
 		OnSessionJoinedDelegate.Broadcast(SessionName, ConnectInfo);
 		
-		UE_LOG(LogMultiplayer, Display, TEXT("Connected to session \"%s\" at %s"), *SessionName.ToString(), *ConnectInfo);
+		UE_LOG(LogMultiplayer, Display, TEXT("Joined session \"%s\" at %s"), *SessionName.ToString(), *ConnectInfo);
 		GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::White,
-			FString::Printf(TEXT("Connected to session \"%s\" at %s"), *SessionName.ToString(), *ConnectInfo));
+			FString::Printf(TEXT("Joined session \"%s\" at %s"), *SessionName.ToString(), *ConnectInfo));
+	}
+	else
+	{
+		const uint8 ErrorCode = static_cast<uint8>(Result);
+		UE_LOG(LogMultiplayer, Warning, TEXT("Failed to join session \"%s\": Error code %i"), *SessionName.ToString(), ErrorCode);
+		GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::White,
+			FString::Printf(TEXT("Failed to join session \"%s\": Error code %i"), *SessionName.ToString(), ErrorCode));
 	}
 }

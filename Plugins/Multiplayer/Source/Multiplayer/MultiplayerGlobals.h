@@ -13,7 +13,7 @@ struct FMultiplayerSessionInfo
 
 	FMultiplayerSessionInfo() {}
 	FMultiplayerSessionInfo(const FOnlineSession& Session);
-	FMultiplayerSessionInfo(const FOnlineSessionSearchResult& SessionSearchResult) { FMultiplayerSessionInfo(SessionSearchResult.Session); }
+	FMultiplayerSessionInfo(const FOnlineSessionSearchResult& SessionSearchResult) : FMultiplayerSessionInfo(SessionSearchResult.Session) {}
 	
 	// The name of the session
 	UPROPERTY(BlueprintReadWrite)
