@@ -7,8 +7,10 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "MultiplayerSubsystem.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSessionsFoundDelegate, const TArray<FMultiplayerSessionSearchResult>&, SessionSearchResults);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSessionJoinedDelegate, const FName&, SessionName, const FString&, ConnectInfo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPostCreateSessionDelegate, const FMultiplayerSessionInfo&, SessionInfo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPostDestroySessionDelegate, const FName&, SessionName);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPostFindSessionDelegate, const TArray<FMultiplayerSessionSearchResult>&, SessionSearchResults);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPostJoinSessionDelegate, const FName&, SessionName, const FString&, ConnectInfo);
 
 UCLASS(Config=Game)
 class MULTIPLAYER_API UMultiplayerSubsystem : public UGameInstanceSubsystem
@@ -20,19 +22,16 @@ public:
 	
 	FOnlineSessionSettings DefaultSessionSettings;
 	FOnlineSessionSearch DefaultSessionSearch;
-
-	UPROPERTY(BlueprintAssignable)
-	FOnSessionsFoundDelegate OnSessionsFoundDelegate;
-
-	UPROPERTY(BlueprintAssignable)
-	FOnSessionJoinedDelegate OnSessionJoinedDelegate;
 	
 protected:
 	UPROPERTY(BlueprintReadOnly)
 	FName OnlineSubsystemName = NAME_None;
 	
+	// Info on the last session that this subsystem has either attempted to create or join.
+	UPROPERTY(BlueprintReadOnly)
+	FMultiplayerSessionInfo LastSessionInfo;
+	
 	IOnlineSessionPtr SessionInterface = nullptr;
-	TArray<FName> HostedSessionNames;
 
 	FOnCreateSessionCompleteDelegate CreateSessionCompleteDelegate;
 	FDelegateHandle CreateSessionCompleteDelegateHandle;
@@ -48,15 +47,35 @@ protected:
 	FDelegateHandle JoinSessionCompleteDelegateHandle;
 
 public:
-	UFUNCTION(BlueprintCallable)
-	void CreateSession(const FName SessionName);
+	UPROPERTY(BlueprintAssignable)
+	FPostCreateSessionDelegate PostCreateSessionDelegate;
 
+	UPROPERTY(BlueprintAssignable)
+	FPostDestroySessionDelegate PostDestroySessionDelegate;
+	
+	UPROPERTY(BlueprintAssignable)
+	FPostFindSessionDelegate PostFindSessionDelegate;
+
+	UPROPERTY(BlueprintAssignable)
+	FPostJoinSessionDelegate PostJoinSessionDelegate;
+	
+	// Returns the search results from the last time FindSession() was called.
+	UFUNCTION(BlueprintPure)
+	TArray<FMultiplayerSessionSearchResult> GetLastSessionSearchResults() const;
+	
+	// Creates a session based on the given session info params.
+	UFUNCTION(BlueprintCallable)
+	void CreateSession(const FMultiplayerSessionInfo SessionInfo);
+
+	// Safely destroys an existing session of the given name.
 	UFUNCTION(BlueprintCallable)
 	void DestroySession(const FName SessionName);
 
+	// Finds all the publicly available sessions.
 	UFUNCTION(BlueprintCallable)
 	void FindSessions();
 
+	// Joins a session from the given name and search result.
 	UFUNCTION(BlueprintCallable)
 	void JoinSession(const FName SessionName, const FMultiplayerSessionSearchResult& SessionSearchResult);
 	
@@ -64,6 +83,7 @@ protected:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
+private:
 	void OnCreateSessionCompleted(const FName SessionName, const bool bWasSuccessful);
 	void OnDestroySessionCompleted(const FName SessionName, const bool bWasSuccessful);
 	void OnFindSessionsCompleted(const bool bWasSuccessful);
