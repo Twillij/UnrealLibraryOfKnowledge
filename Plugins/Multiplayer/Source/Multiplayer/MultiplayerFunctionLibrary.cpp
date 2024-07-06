@@ -1,20 +1,22 @@
 #include "MultiplayerFunctionLibrary.h"
 #include "MultiplayerGlobals.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameFramework/OnlineReplStructs.h"
+#include "Online/CoreOnline.h"
 
-FUniqueNetIdRepl UMultiplayerFunctionLibrary::GetLocalPlayerUniqueNetId(const UWorld* World)
+FUniqueNetIdRepl UMultiplayerFunctionLibrary::GetLocalPlayerNetId(const UObject* WorldContextObject)
 {
 	FUniqueNetIdRepl PlayerNetId;
-	if (World)
+	
+	if (const APlayerController* PlayerController = UGameplayStatics::GetPlayerControllerFromID(WorldContextObject, 0))
 	{
-		const ULocalPlayer* LocalPlayer = World->GetFirstLocalPlayerFromController();
-		PlayerNetId = LocalPlayer ? LocalPlayer->GetPreferredUniqueNetId() : PlayerNetId;
+		if (const ULocalPlayer* LocalPlayer = PlayerController->GetLocalPlayer())
+		{
+			PlayerNetId = LocalPlayer->GetPreferredUniqueNetId();
+		}
 	}
+	
 	return PlayerNetId;
-}
-
-FMultiplayerSessionInfo UMultiplayerFunctionLibrary::GetSessionInfoFromSearchResult(const FMultiplayerSessionSearchResult& SessionSearchResult)
-{
-	return FMultiplayerSessionInfo(SessionSearchResult.Result);
 }
 
 bool UMultiplayerFunctionLibrary::IsClient(const UWorld* World)
@@ -25,6 +27,23 @@ bool UMultiplayerFunctionLibrary::IsClient(const UWorld* World)
 bool UMultiplayerFunctionLibrary::IsServer(const UWorld* World)
 {
 	return World ? World->GetNetMode() <= NM_ListenServer : true;
+}
+
+FString UMultiplayerFunctionLibrary::NetIdToString(const FUniqueNetIdRepl& NetId)
+{
+	return NetId.IsValid() ? NetId->ToString() : FString();
+}
+
+FUniqueNetIdRepl UMultiplayerFunctionLibrary::StringToNetId(const FString& NetIdString)
+{
+	FUniqueNetIdRepl Result;
+	Result.FromJson(NetIdString);
+	return Result;
+}
+
+FMultiplayerSessionInfo UMultiplayerFunctionLibrary::SessionSearchResultToInfo(const FMultiplayerSessionSearchResult& SessionSearchResult)
+{
+	return FMultiplayerSessionInfo(SessionSearchResult.Result);
 }
 
 void UMultiplayerFunctionLibrary::LogNetMode(const UWorld* World)

@@ -5,14 +5,8 @@
 
 UMultiplayerSubsystem::UMultiplayerSubsystem()
 {
-	// Set the session delegates
-	CreateSessionCompleteDelegate = FOnCreateSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnCreateSessionCompleted);
-	DestroySessionCompleteDelegate = FOnDestroySessionCompleteDelegate::CreateUObject(this, &ThisClass::OnDestroySessionCompleted);
-	FindSessionsCompleteDelegate = FOnFindSessionsCompleteDelegate::CreateUObject(this, &ThisClass::OnFindSessionsCompleted);
-	JoinSessionCompleteDelegate = FOnJoinSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnJoinSessionCompleted);
-	
 	// Set the default session settings
-	DefaultSessionSettings.NumPublicConnections = 4;
+	DefaultSessionSettings.NumPublicConnections = 2;
 	DefaultSessionSettings.bIsDedicated = false;
 	DefaultSessionSettings.bAllowInvites = true;
 	DefaultSessionSettings.bAllowJoinInProgress = true;
@@ -40,26 +34,65 @@ TArray<FMultiplayerSessionSearchResult> UMultiplayerSubsystem::GetLastSessionSea
 	return Results;
 }
 
-void UMultiplayerSubsystem::CreateSession(const FMultiplayerSessionInfo SessionInfo)
+FMultiplayerSessionSearchResult UMultiplayerSubsystem::GetLastSessionSearchResultByHostId(const FUniqueNetIdRepl InHostId) const
+{
+	if (LastSessionSearch)
+	{
+		TArray<FOnlineSessionSearchResult> Results = LastSessionSearch->SearchResults;
+	
+		for (int i = 0; i < Results.Num(); ++i)
+		{
+			if (Results[i].Session.OwningUserId == InHostId)
+			{
+				return Results[i];
+			}
+		}
+	}
+	return FMultiplayerSessionSearchResult();
+}
+
+FMultiplayerSessionSearchResult UMultiplayerSubsystem::GetLastSessionSearchResultBySessionId(const FUniqueNetIdRepl InSessionId) const
+{
+	if (LastSessionSearch)
+	{
+		TArray<FOnlineSessionSearchResult> Results = LastSessionSearch->SearchResults;
+	
+		for (int i = 0; i < Results.Num(); ++i)
+		{
+			if (const TSharedPtr<FOnlineSessionInfo> SessionInfo = Results[i].Session.SessionInfo)
+			{
+				if (SessionInfo->GetSessionId() == InSessionId)
+				{
+					return Results[i];
+				}
+			}
+		}
+	}
+	return FMultiplayerSessionSearchResult();
+}
+
+void UMultiplayerSubsystem::CreateSession(const FMultiplayerSessionSettings SessionSettings)
 {
 	if (!SessionInterface)
 		return;
 	
-	LastSessionInfo = SessionInfo;
-	
 	// Get the player's unique net ID
-	const FUniqueNetIdRepl PlayerNetId = UMultiplayerFunctionLibrary::GetLocalPlayerUniqueNetId(GetWorld());
+	const FUniqueNetIdRepl PlayerNetId = UMultiplayerFunctionLibrary::GetLocalPlayerNetId(GetWorld());
 
 	// Bind the delegate to the session interface and store the handle
 	CreateSessionCompleteDelegateHandle = SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegate);
 
 	// Create a new session settings by combining the default and custom settings.
-	const FOnlineSessionSettings NewSessionSettings = SessionInfo + DefaultSessionSettings;
+	const FOnlineSessionSettings NewSessionSettings = SessionSettings + DefaultSessionSettings;
+
+	// Save the session info
+	LastSessionInfo.HostPlayerId = PlayerNetId;
+	LastSessionInfo.SessionSettings = SessionSettings;
 	
 	// Try to create a session using the specified params
-	if (!SessionInterface->CreateSession(*PlayerNetId, SessionInfo.SessionName, NewSessionSettings))
+	if (!SessionInterface->CreateSession(*PlayerNetId, SessionSettings.SessionName, NewSessionSettings))
 	{
-		OnCreateSessionCompleted(SessionInfo.SessionName, false);
+		OnCreateSessionCompleted(SessionSettings.SessionName, false);
 	}
 }
 
@@ -69,7 +102,7 @@ void UMultiplayerSubsystem::DestroySession(const FName SessionName)
 		return;
 
 	// Check if a session with that name exists on the server or if that session has any players remaining
-	const FNamedOnlineSession* NamedSession = SessionInterface->GetNamedSession(LastSessionInfo.SessionName);
+	const FNamedOnlineSession* NamedSession = SessionInterface->GetNamedSession(LastSessionInfo.GetSessionName());
 	if (!NamedSession || NamedSession->RegisteredPlayers.Num() > 0)
 	{
 		return;
@@ -91,14 +124,14 @@ void UMultiplayerSubsystem::FindSessions()
 		return;
 	
 	// Get the player's unique net ID
-	const FUniqueNetIdRepl PlayerNetId = UMultiplayerFunctionLibrary::GetLocalPlayerUniqueNetId(GetWorld());
+	const FUniqueNetIdRepl PlayerNetId = UMultiplayerFunctionLibrary::GetLocalPlayerNetId(GetWorld());
 	
 	// Create and store a new session search
 	LastSessionSearch = MakeShareable(new FOnlineSessionSearch(DefaultSessionSearch));
 
 	// Bind the delegate to the session interface and store the handle
 	FindSessionsCompleteDelegateHandle = SessionInterface->AddOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegate);
-
+	
 	// Try to find sessions using the specified params
 	if (!SessionInterface->FindSessions(*PlayerNetId, LastSessionSearch.ToSharedRef()))
 	{
@@ -106,15 +139,17 @@ void UMultiplayerSubsystem::FindSessions()
 	}
 }
 
-void UMultiplayerSubsystem::JoinSession(const FName SessionName, const FMultiplayerSessionSearchResult& SessionSearchResult)
+void UMultiplayerSubsystem::JoinSession(const FMultiplayerSessionSearchResult& SessionSearchResult)
 {
 	if (!SessionInterface)
 		return;
 
+	// Save the session info and get the name
 	LastSessionInfo = SessionSearchResult.Result;
+	const FName SessionName = LastSessionInfo.GetSessionName();
 	
 	// Get the player's unique net ID
-	const FUniqueNetIdRepl PlayerNetId = UMultiplayerFunctionLibrary::GetLocalPlayerUniqueNetId(GetWorld());
+	const FUniqueNetIdRepl PlayerNetId = UMultiplayerFunctionLibrary::GetLocalPlayerNetId(GetWorld());
 
 	// Bind the delegate to the session interface and store the handle
 	JoinSessionCompleteDelegateHandle = SessionInterface->AddOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegate);
@@ -141,13 +176,20 @@ void UMultiplayerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	OnlineSubsystemName = OnlineSubsystem->GetSubsystemName();
 	UE_LOG(LogMultiplayer, Display, TEXT("Connected to OSS: %s"), *OnlineSubsystemName.ToString());
 
-	// Bind delegates to the session interface
+	// Store the session interface pointer
 	SessionInterface = OnlineSubsystem->GetSessionInterface();
-	if (SessionInterface)
+	if (!SessionInterface)
 	{
-		SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &ThisClass::OnDestroySessionCompleted);
+		UE_LOG(LogMultiplayer, Error, TEXT("Failed to initialize OSS interface."))
+		return;
 	}
 
+	// Assign the delegates
+	CreateSessionCompleteDelegate = FOnCreateSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnCreateSessionCompleted);
+	DestroySessionCompleteDelegate = FOnDestroySessionCompleteDelegate::CreateUObject(this, &ThisClass::OnDestroySessionCompleted);
+	FindSessionsCompleteDelegate = FOnFindSessionsCompleteDelegate::CreateUObject(this, &ThisClass::OnFindSessionsCompleted);
+	JoinSessionCompleteDelegate = FOnJoinSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnJoinSessionCompleted);
+	
 	// Determine whether this is a LAN match or not
 	DefaultSessionSettings.bIsLANMatch = OnlineSubsystemName == "NULL";
 	DefaultSessionSearch.bIsLanQuery = OnlineSubsystemName == "NULL";
@@ -156,7 +198,7 @@ void UMultiplayerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 void UMultiplayerSubsystem::Deinitialize()
 {
 	Super::Deinitialize();
-	DestroySession(LastSessionInfo.SessionName);
+	DestroySession(LastSessionInfo.GetSessionName());
 }
 
 void UMultiplayerSubsystem::OnCreateSessionCompleted(const FName SessionName, const bool bWasSuccessful)
@@ -179,7 +221,7 @@ void UMultiplayerSubsystem::OnDestroySessionCompleted(const FName SessionName, c
 		return;
 
 	SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
-
+	
 	const FString LogString = FString::Printf(TEXT("Destroying session \"%s\": %hs"), *SessionName.ToString(), bWasSuccessful ? "SUCCESS" : "FAILED");
 	UE_LOG(LogMultiplayer, Type::Warning, TEXT("%s"), *LogString);
 	GEngine->AddOnScreenDebugMessage(-1, 5, FColor::White, LogString);
@@ -211,11 +253,11 @@ void UMultiplayerSubsystem::OnFindSessionsCompleted(const bool bWasSuccessful)
 	for (int i = 0; i < Results.Num(); ++i)
 	{
 		FMultiplayerSessionInfo SessionInfo = Results[i];
-		const FString ResultLogString = FString::Printf(TEXT("Found session %i: %s"), i + 1, *SessionInfo.SessionName.ToString());
+		const FString ResultLogString = FString::Printf(TEXT("Found session %i: %s"), i + 1, *SessionInfo.GetSessionName().ToString());
 		UE_LOG(LogMultiplayer, Display, TEXT("%s"), *ResultLogString)
 		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::White, ResultLogString);
 	}
-	
+
 	PostFindSessionDelegate.Broadcast(GetLastSessionSearchResults());
 }
 
@@ -224,7 +266,7 @@ void UMultiplayerSubsystem::OnJoinSessionCompleted(const FName SessionName, cons
 	if (!SessionInterface)
 		return;
 	
-	SessionInterface->ClearOnJoinSessionCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
+	SessionInterface->ClearOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegateHandle);
 
 	FString ConnectInfo;
 	
@@ -246,5 +288,5 @@ void UMultiplayerSubsystem::OnJoinSessionCompleted(const FName SessionName, cons
 		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::White, LogString);
 	}
 
-	PostJoinSessionDelegate.Broadcast(SessionName, ConnectInfo);
+	PostJoinSessionDelegate.Broadcast(LastSessionInfo, ConnectInfo);
 }

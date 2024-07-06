@@ -10,7 +10,7 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPostCreateSessionDelegate, const FMultiplayerSessionInfo&, SessionInfo);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPostDestroySessionDelegate, const FName&, SessionName);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPostFindSessionDelegate, const TArray<FMultiplayerSessionSearchResult>&, SessionSearchResults);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPostJoinSessionDelegate, const FName&, SessionName, const FString&, ConnectInfo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPostJoinSessionDelegate, const FMultiplayerSessionInfo&, SessionInfo, const FString&, ConnectInfo);
 
 UCLASS(Config=Game)
 class MULTIPLAYER_API UMultiplayerSubsystem : public UGameInstanceSubsystem
@@ -59,13 +59,21 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FPostJoinSessionDelegate PostJoinSessionDelegate;
 	
-	// Returns the search results from the last time FindSession() was called.
+	// Returns all the search results from the last time FindSession() was called.
 	UFUNCTION(BlueprintPure)
 	TArray<FMultiplayerSessionSearchResult> GetLastSessionSearchResults() const;
+
+	// Returns the search result from the last time FindSession() was called that has the corresponding host player ID.
+	UFUNCTION(BlueprintPure)
+	FMultiplayerSessionSearchResult GetLastSessionSearchResultByHostId(const FUniqueNetIdRepl InHostId) const;
+
+	// Returns the search result from the last time FindSession() was called that has the corresponding session ID.
+	UFUNCTION(BlueprintPure)
+	FMultiplayerSessionSearchResult GetLastSessionSearchResultBySessionId(const FUniqueNetIdRepl InSessionId) const;
 	
 	// Creates a session based on the given session info params.
 	UFUNCTION(BlueprintCallable)
-	void CreateSession(const FMultiplayerSessionInfo SessionInfo);
+	void CreateSession(const FMultiplayerSessionSettings SessionSettings);
 
 	// Safely destroys an existing session of the given name.
 	UFUNCTION(BlueprintCallable)
@@ -77,7 +85,7 @@ public:
 
 	// Joins a session from the given name and search result.
 	UFUNCTION(BlueprintCallable)
-	void JoinSession(const FName SessionName, const FMultiplayerSessionSearchResult& SessionSearchResult);
+	void JoinSession(const FMultiplayerSessionSearchResult& SessionSearchResult);
 	
 protected:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
