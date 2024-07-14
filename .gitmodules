@@ -1,0 +1,3 @@
+[submodule "Plugins/UnrealMultiplayer"]
+	path = Plugins/UnrealMultiplayer
+	url = git@github.com:Twillij/UnrealMultiplayer.git
