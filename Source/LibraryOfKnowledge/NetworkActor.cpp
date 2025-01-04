@@ -14,6 +14,11 @@ void ANetworkActor::PrintLog(const FString& LogString)
 	GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::White, LogString);
 }
 
+void ANetworkActor::ClientReceiveNetworkObject_Implementation(UNetworkObject* InNetworkObject)
+{
+	GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::White, FString::Printf(TEXT("%i"), InNetworkObject->Num));
+}
+
 void ANetworkActor::ServerPrintLog_Implementation(const FString& LogString)
 {
 	PrintLog(LogString);
@@ -36,8 +41,10 @@ void ANetworkActor::BeginPlay()
 
 	if (HasAuthority())
 	{
-		NetworkObject = NewObject<UNetworkObject>();
-		NetworkObject->Num = 5;
-		ClientPrintLog(FString::Printf(TEXT("%i"), NetworkObject->Num));
+		UNetworkObject* NewNetworkObject = NewObject<UNetworkObject>();
+		NewNetworkObject->Num = 4;
+		//NetworkObject = NewNetworkObject;
+		ClientReceiveNetworkObject(NewNetworkObject);
+		//ClientPrintLog(FString::Printf(TEXT("%i"), NetworkObject->Num));
 	}
 }

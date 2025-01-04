@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "NetworkObject.h"
 #include "GameFramework/Actor.h"
 #include "NetworkActor.generated.h"
 
@@ -20,6 +21,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	static void PrintLog(const FString& LogString);
+
+	UFUNCTION(Client, Reliable, BlueprintCallable)
+	void ClientReceiveNetworkObject(UNetworkObject* InNetworkObject);
 	
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void ServerPrintLog(const FString& LogString);
