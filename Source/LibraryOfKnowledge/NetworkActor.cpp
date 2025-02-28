@@ -44,7 +44,7 @@ void ANetworkActor::BeginPlay()
 		UNetworkObject* NewNetworkObject = NewObject<UNetworkObject>();
 		NewNetworkObject->Num = 4;
 		//NetworkObject = NewNetworkObject;
-		ClientReceiveNetworkObject(NewNetworkObject);
+		//ClientReceiveNetworkObject(NewNetworkObject);
 		//ClientPrintLog(FString::Printf(TEXT("%i"), NetworkObject->Num));
 	}
 }
