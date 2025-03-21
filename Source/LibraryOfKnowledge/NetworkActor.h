@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "MyGlobals.h"
 #include "NetworkObject.h"
 #include "GameFramework/Actor.h"
 #include "NetworkActor.generated.h"
@@ -15,6 +16,8 @@ class LIBRARYOFKNOWLEDGE_API ANetworkActor : public AActor
 public:
 	UPROPERTY(Replicated, BlueprintReadWrite)
 	UNetworkObject* NetworkObject = nullptr;
+	
+	FMyStruct* MyStructPtr = nullptr;
 	
 public:
 	ANetworkActor();

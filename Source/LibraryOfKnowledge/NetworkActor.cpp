@@ -1,4 +1,7 @@
 #include "NetworkActor.h"
+
+#include "MyFunctionLibrary.h"
+#include "MyGlobals.h"
 #include "NetworkObject.h"
 #include "Net/UnrealNetwork.h"
 
@@ -47,4 +50,11 @@ void ANetworkActor::BeginPlay()
 		//ClientReceiveNetworkObject(NewNetworkObject);
 		//ClientPrintLog(FString::Printf(TEXT("%i"), NetworkObject->Num));
 	}
+
+	FMyChildStruct MyChildStruct;
+	MyChildStruct.ChildVal = 5;
+	MyStructPtr = &MyChildStruct;
+	const FMyChildStruct* ChildStructPtr = static_cast<FMyChildStruct*>(MyStructPtr);
+
+	GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::White, FString::Printf(TEXT("Struct Child Var: %i"), ChildStructPtr->ChildVal));
 }
